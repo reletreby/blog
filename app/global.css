@@ -78,6 +78,23 @@ html {
   @apply font-medium;
 }
 
+pre {
+  overflow-x: auto;
+  white-space: pre;
+  scrollbar-width: thin; /* Firefox */
+}
+
+pre::-webkit-scrollbar { /* Chrome, Safari, Edge */
+  height: 8px; /* Adjust scrollbar height */
+  background-color: #f5f5f5; /* Scrollbar track color */
+}
+
+pre::-webkit-scrollbar-thumb { /* Chrome, Safari, Edge */
+  background-color: #ddd; /* Scrollbar thumb color */
+  border-radius: 4px; /* Rounded scrollbar thumb */
+}
+
+
 .prose img {
   /* Don't apply styles to next/image */
   @apply m-0;
@@ -121,14 +138,6 @@ html {
   margin-bottom: 1.25em !important;
 }
 
-pre::-webkit-scrollbar {
-  display: none;
-}
-
-pre {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
-}
 
 /* Remove Safari input shadow on mobile */
 input[type='text'],
