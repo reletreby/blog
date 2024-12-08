@@ -23,6 +23,12 @@ export const metadata: Metadata = {
     locale: 'en_US',
     type: 'website',
   },
+  manifest: '/site.webmanifest', // Add this line to reference your manifest file
+  icons: {
+    icon: '/favicon-32x32.png', // Path to your favicon
+    apple: '/apple-touch-icon.png', // Path to your Apple Touch Icon
+    shortcut: '/favicon-16x16.png', // Path to your smaller favicons
+  },
   robots: {
     index: true,
     follow: true,
