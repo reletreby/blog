@@ -18,10 +18,6 @@ export default function Page() {
           </div>
         </div>
       </section>
-      <section>
-        <h2 className="text-xl font-semibold mb-4">Recent Posts</h2>
-        <BlogPosts />
-      </section>
     </section>
   );
 }
