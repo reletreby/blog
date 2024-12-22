@@ -15,6 +15,15 @@ export default function Page() {
             <p>
               {`Everything here is MIT licensed, so feel free to use and share it. If you have feedback, I'd love to hear from you!`}
             </p>
+            <p>
+              {`The opinions expressed here are my own and do not represent the views of my current employer.`}
+            </p>
+            <p>
+              {`I write most of the content myself, but I also make use of tools like ChatGPT and Claude to clean up what I write or to contribute specific sections.`}
+            </p>
+            <p>
+              {`If you'd like to connect, feel free to reach out at eletreby.rashad@gmail.com.`}
+            </p>
           </div>
         </div>
       </section>

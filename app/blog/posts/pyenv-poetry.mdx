@@ -1,0 +1,197 @@
+---
+title: 'Streamlining Python Project Management with pyenv and poetry'
+publishedAt: '2024-12-21'
+summary: 'A comprehensive guide to using pyenv and poetry for managing Python environments and dependencies. This post includes a step-by-step tutorial to set up and configure a new Python project efficiently.'
+---
+
+This is going to be a pretty quick read, and it will save your future self hours.
+
+Let’s say you have a brand-new Linux machine or you’ve decided to start fresh and manage your Python dependencies better. If that's the case, this blog post is for you. Let's dive into it!
+
+---
+
+### 1. Install `pyenv`
+
+Start by updating your system and installing the necessary dependencies for `pyenv`:
+
+```bash
+sudo apt update
+sudo apt upgrade
+sudo apt install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
+```
+
+Then, install `pyenv` using the following script:
+
+```bash
+curl https://pyenv.run | bash
+```
+
+Once the script completes, it will display instructions to update your PATH so that the `pyenv` command is recognized. Follow those steps by editing your `~/.bashrc` file (or `~/.zshrc` if using Zsh) with a text editor like `vim` or `nano`, then activate the changes:
+
+```bash
+source ~/.bashrc
+```
+
+Now, with `pyenv` installed, you can install and manage different Python versions. For example, to install Python 3.11:
+
+```bash
+pyenv install 3.11
+```
+
+You’ll see output similar to the following:
+
+```bash
+Downloading Python-3.11.11.tar.xz...
+-> https://www.python.org/ftp/python/3.11.11/Python-3.11.11.tar.xz
+Installing Python-3.11.11...
+Installed Python-3.11.11 to /home/<username>/.pyenv/versions/3.11.11
+```
+
+To confirm the installed versions, use:
+
+```bash
+pyenv versions
+```
+
+Output:
+
+```bash
+* system (set by /home/<username>/.pyenv/version)
+  3.11.11
+  3.12.8
+```
+
+You can switch between Python versions globally or locally:
+
+- **Global version:**
+  ```bash
+  pyenv global 3.12
+  ```
+  This sets Python 3.12 as the default for all environments.
+- **Local version (per directory):**
+  ```bash
+  pyenv local 3.11
+  ```
+  This sets Python 3.11 as the default for the current project directory, regardless of the global version.
+
+---
+
+### 2. Install `poetry`
+
+`poetry` is a powerful tool for dependency management and packaging in Python. It keeps your code and dependencies organized, provides an easy way to manage them, and ensures compatibility with a lock file.
+
+To install `poetry`, run:
+
+```bash
+curl -sSL https://install.python-poetry.org | python3 -
+```
+
+Like `pyenv`, you’ll need to update your PATH as guided by the installer. Update your `~/.bashrc` file and activate the changes:
+
+```bash
+source ~/.bashrc
+```
+
+With `poetry` installed, you’re ready to start managing your Python projects. `poetry` defaults to the active Python version set by `pyenv`. If your project requires a specific Python version, ensure you’ve activated it with `pyenv` before initializing the project with `poetry`.
+
+---
+
+### 3. Creating a New Project with `pyenv` and `poetry`: E2E Tutorial
+
+This section will guide you through using `pyenv` and `poetry` to create a new Python project step by step.
+
+#### Step 1: Set up the Python version
+
+Use `pyenv` to install and set the desired Python version:
+
+```bash
+pyenv install 3.11
+pyenv global 3.11
+```
+
+Confirm the Python version:
+
+```bash
+python --version
+# Output: Python 3.11.x
+```
+
+#### Step 2: Initialize a new project with `poetry`
+
+Navigate to the directory where you want to create your project and initialize it with `poetry`:
+
+```bash
+mkdir my_project && cd my_project
+poetry init
+```
+
+The `poetry init` command will guide you through:
+
+- Naming your project
+- Adding a description
+- Specifying the Python version constraint (default aligns with the active `pyenv` version)
+- Adding dependencies (optional, you can skip this for now)
+
+This process generates a `pyproject.toml` file, which is the configuration file for your project.
+
+#### Step 3: Install dependencies
+
+Activate the virtual environment managed by `poetry`:
+
+```bash
+poetry shell
+```
+
+Add dependencies as needed:
+
+```bash
+poetry add numpy pandas
+```
+
+`poetry` will resolve dependencies and update the `pyproject.toml` and `poetry.lock` files.
+
+#### Step 4: Verify the setup
+
+Check installed dependencies:
+
+```bash
+poetry show
+```
+
+Run Python within the virtual environment:
+
+```bash
+python
+>>> import numpy
+>>> import pandas
+>>> print("Setup complete!")
+```
+
+#### Step 5: Share your project
+
+To share your project with others, they can clone your repository and install dependencies using:
+
+```bash
+git clone <repository_url>
+cd my_project
+poetry install
+```
+
+This command will create the virtual environment and install all dependencies as specified in the `poetry.lock` file.
+
+With dependencies installed using `poetry install`, one can run any Python script with:
+
+```bash
+poetry run python script.py
+```
+
+This ensures that the script runs with all the dependencies it needs as specified by the lock file!
+
+---
+
+### References
+
+- [How to Install pyenv on Ubuntu](https://medium.com/@aashari/easy-to-follow-guide-of-how-to-install-pyenv-on-ubuntu-a3730af8d7f0)
+- [How to Install poetry](https://python-poetry.org/docs/#installing-with-the-official-installer)
+
+By following this guide, you’ve set up `pyenv` and `poetry` to streamline your Python project management. Happy coding!
