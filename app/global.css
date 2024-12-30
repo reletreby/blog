@@ -15,17 +15,32 @@
   --sh-jsxliterals: #6266d1;
   --sh-property: #e25a1c;
   --sh-entity: #e25a1c;
+  --bg-light: #f2f2f2;
+  --bg-light-secondary: #e8e8e8;
+  --text-light: #1a1a1a;
+}
+
+html,
+body {
+  background-color: var(--bg-light);
+  color: var(--text-light);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --sh-class: #4c97f8;
-    --sh-identifier: white;
+    --sh-identifier: #e4e4e4;
     --sh-keyword: #f47067;
     --sh-string: #0fa295;
+    --bg-dark: #1a1a1a;
+    --bg-dark-secondary: #242424;
+    --text-dark: #e4e4e4;
   }
-  html {
-    color-scheme: dark;
+
+  html,
+  body {
+    background-color: var(--bg-dark);
+    color: var(--text-dark);
   }
 }
 
