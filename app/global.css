@@ -17,7 +17,7 @@
   --sh-jsxliterals: #6266d1;
   --sh-property: #e25a1c;
   --sh-entity: #994cc3;
-  --bg-light: #f2f2f2;
+  --bg-light: #edecec;
   --bg-light-secondary: #e8e8e8;
   --text-light: #1a1a1a;
 }
@@ -33,7 +33,7 @@
     --sh-jsxliterals: #b5cea8;
     --sh-property: #9cdcfe;
     --sh-entity: #c586c0;
-    --bg-light: #1e1e1e;
+    --bg-light: #2b2b2b;
     --bg-light-secondary: #2d2d2d;
     --text-light: #d4d4d4;
   }
