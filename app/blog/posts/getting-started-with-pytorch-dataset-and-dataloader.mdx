@@ -18,6 +18,8 @@ To train a model in PyTorch, you primarily need three things:
 
 This particular blog post focuses on the **Data** aspect.
 
+> **Note:** In upcoming blog posts, we will dive deep into the remaining components - exploring Model architecture and implementation, followed by putting it all together in the Training Loop.
+
 Before we begin, make sure to install the required packages: `torch`, `torchvision`, and `pandas`. You can install these using pip, Python's package installer.
 
 # Data
@@ -246,6 +248,18 @@ Since we know each row in the training data corresponds to one single-channel im
 The `DataLoader` class is an iterable around the FashionMNIST `Dataset`. We can loop over it as we do with any iterable, but we cannot access specific indices, which is again expected for iterable objects. In fact, if you attempt to do so, you'll get (`TypeError: 'DataLoader' object is not subscriptable`). Since the `Dataset` object has an internal `__getitem__` method, the `DataLoader` will interface natively with this method to fetch a full `batch_size` worth of data. This will become apparent when we talk about the **Training Loop** in a follow-up blog post.
 
 The `DataLoader` class can also interface with custom datasets like the Pandas DataFrame-based dataset described earlier, handling batching, shuffling, and other optimizations in the same way.
+
+# Conclusion
+
+In this post, we covered the fundamentals of data handling in PyTorch, focusing on two essential classes:
+
+- The `Dataset` class for defining and accessing your data
+- The `DataLoader` class for efficient batching and iteration
+
+We explored both built-in datasets like FashionMNIST and implementing custom datasets for Pandas DataFrames. Stay tuned for the next posts in this series where we'll explore:
+
+- Part 2: Building Models in PyTorch
+- Part 3: Implementing the Training Loop
 
 ## References
 
