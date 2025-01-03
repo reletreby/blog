@@ -1,28 +1,64 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { MDXRemote } from 'next-mdx-remote/rsc';
-import { highlight } from 'sugar-high';
+import hljs from 'highlight.js/lib/core';
+import python from 'highlight.js/lib/languages/python';
+import javascript from 'highlight.js/lib/languages/javascript';
+import typescript from 'highlight.js/lib/languages/typescript';
+import bash from 'highlight.js/lib/languages/bash';
+import json from 'highlight.js/lib/languages/json';
+import css from 'highlight.js/lib/languages/css';
+import html from 'highlight.js/lib/languages/xml';
+import markdown from 'highlight.js/lib/languages/markdown';
 import React from 'react';
+
+// Register common languages
+hljs.registerLanguage('python', python);
+hljs.registerLanguage('javascript', javascript);
+hljs.registerLanguage('typescript', typescript);
+hljs.registerLanguage('bash', bash);
+hljs.registerLanguage('json', json);
+hljs.registerLanguage('css', css);
+hljs.registerLanguage('html', html);
+hljs.registerLanguage('markdown', markdown);
 
 function Table({ data }) {
   let headers = data.headers.map((header, index) => (
-    <th key={index}>{header}</th>
+    <th
+      key={index}
+      className="px-6 py-4 text-left text-sm font-medium tracking-wider border-b border-neutral-200 dark:border-neutral-800"
+    >
+      {header}
+    </th>
   ));
+
   let rows = data.rows.map((row, index) => (
-    <tr key={index}>
+    <tr
+      key={index}
+      className="hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+    >
       {row.map((cell, cellIndex) => (
-        <td key={cellIndex}>{cell}</td>
+        <td
+          key={cellIndex}
+          className="px-6 py-4 text-sm border-b border-neutral-200 dark:border-neutral-800"
+        >
+          {cell}
+        </td>
       ))}
     </tr>
   ));
 
   return (
-    <table>
-      <thead>
-        <tr>{headers}</tr>
-      </thead>
-      <tbody>{rows}</tbody>
-    </table>
+    <div className="flex justify-center my-8">
+      <table className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800 divide-y divide-neutral-200 dark:divide-neutral-800">
+        <thead className="bg-neutral-50 dark:bg-neutral-900">
+          <tr>{headers}</tr>
+        </thead>
+        <tbody className="bg-white dark:bg-neutral-800 divide-y divide-neutral-200 dark:divide-neutral-800">
+          {rows}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -48,20 +84,34 @@ function RoundedImage(props) {
   return <Image alt={props.alt} className="rounded-lg" {...props} />;
 }
 
-function Code({ children, ...props }) {
-  let codeHTML = highlight(children);
-  return <code dangerouslySetInnerHTML={{ __html: codeHTML }} {...props} />;
+function Code({ children, className, ...props }) {
+  // Check if the code block has a language specified
+  const language = className ? className.replace('language-', '') : 'python';
+
+  // Highlight the code with highlight.js
+  const highlightedCode = hljs.highlight(children, {
+    language: language,
+    ignoreIllegals: true,
+  }).value;
+
+  return (
+    <code
+      className={className}
+      dangerouslySetInnerHTML={{ __html: highlightedCode }}
+      {...props}
+    />
+  );
 }
 
 function slugify(str) {
   return str
     .toString()
     .toLowerCase()
-    .trim() // Remove whitespace from both ends of a string
-    .replace(/\s+/g, '-') // Replace spaces with -
-    .replace(/&/g, '-and-') // Replace & with 'and'
-    .replace(/[^\w\-]+/g, '') // Remove all non-word characters except for -
-    .replace(/\-\-+/g, '-'); // Replace multiple - with single -
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/&/g, '-and-')
+    .replace(/[^\w\-]+/g, '')
+    .replace(/\-\-+/g, '-');
 }
 
 function createHeading(level) {

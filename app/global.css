@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import 'highlight.js/styles/github.css';
 
 ::selection {
   background-color: #47a3f3;
@@ -6,42 +7,42 @@
 }
 
 :root {
-  --sh-class: #2d5e9d;
+  /* Light mode colors */
+  --sh-class: #cd3715;
   --sh-identifier: #354150;
   --sh-sign: #8996a3;
-  --sh-string: #007f7a;
-  --sh-keyword: #e02518;
-  --sh-comment: #a19595;
+  --sh-string: #067d17;
+  --sh-keyword: #0000ff;
+  --sh-comment: #098658;
   --sh-jsxliterals: #6266d1;
   --sh-property: #e25a1c;
-  --sh-entity: #e25a1c;
+  --sh-entity: #994cc3;
   --bg-light: #f2f2f2;
   --bg-light-secondary: #e8e8e8;
   --text-light: #1a1a1a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Dark mode colors */
+    --sh-identifier: #d4d4d4;
+    --sh-sign: #808080;
+    --sh-string: #24b47e;
+    --sh-keyword: #569cd6;
+    --sh-comment: #6a9955;
+    --sh-jsxliterals: #b5cea8;
+    --sh-property: #9cdcfe;
+    --sh-entity: #c586c0;
+    --bg-light: #1e1e1e;
+    --bg-light-secondary: #2d2d2d;
+    --text-light: #d4d4d4;
+  }
 }
 
 html,
 body {
   background-color: var(--bg-light);
   color: var(--text-light);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --sh-class: #4c97f8;
-    --sh-identifier: #e4e4e4;
-    --sh-keyword: #f47067;
-    --sh-string: #0fa295;
-    --bg-dark: #1a1a1a;
-    --bg-dark-secondary: #242424;
-    --text-dark: #e4e4e4;
-  }
-
-  html,
-  body {
-    background-color: var(--bg-dark);
-    color: var(--text-dark);
-  }
 }
 
 html {
@@ -140,23 +141,38 @@ pre::-webkit-scrollbar-thumb {
 }
 
 .prose h1 {
-  @apply text-4xl font-medium tracking-tight mt-6 mb-2;
+  @apply text-3xl font-bold tracking-tight mt-8 mb-4;
+  color: var(--text-light);
 }
 
 .prose h2 {
-  @apply text-xl font-medium tracking-tight mt-6 mb-2;
+  @apply text-2xl font-semibold tracking-tight mt-6 mb-3;
+  color: var(--text-light);
 }
 
 .prose h3 {
-  @apply text-xl font-medium tracking-tight mt-6 mb-2;
+  @apply text-xl font-medium tracking-tight mt-5 mb-3;
+  color: var(--text-light);
 }
 
 .prose h4 {
-  @apply text-lg font-medium tracking-tight mt-6 mb-2;
+  @apply text-xl font-medium tracking-tight mt-4 mb-2;
+  color: var(--text-light);
+}
+
+.prose h5 {
+  @apply text-lg font-medium tracking-tight mt-4 mb-2;
+  color: var(--text-light);
+}
+
+.prose h6 {
+  @apply text-base font-medium tracking-tight mt-4 mb-2;
+  color: var(--text-light);
 }
 
 .prose strong {
-  @apply font-medium;
+  @apply font-bold; /* Change from font-medium to font-bold */
+  font-weight: 700; /* Explicit font-weight to ensure bold rendering */
 }
 
 .prose ul {
@@ -190,4 +206,51 @@ table {
 
 .title {
   text-wrap: balance;
+}
+
+/* Syntax highlighting overrides */
+.hljs-comment,
+.hljs-quote {
+  color: var(--sh-comment);
+}
+
+.hljs-keyword,
+.hljs-selector-tag {
+  color: var(--sh-keyword);
+}
+
+.hljs-string,
+.hljs-regexp {
+  color: var(--sh-string);
+}
+
+.hljs-title,
+.hljs-section {
+  color: var(--sh-class);
+}
+
+.hljs-variable,
+.hljs-template-variable {
+  color: var(--sh-identifier);
+}
+
+.hljs-type,
+.hljs-class {
+  color: var(--sh-entity);
+}
+
+/* Add after existing syntax highlighting overrides */
+.hljs-subst {
+  color: var(--sh-identifier);
+}
+
+@media (prefers-color-scheme: dark) {
+  .prose pre .hljs-subst {
+    color: var(--text-light); /* Bright color for dark mode */
+  }
+}
+
+.hljs-title.class_,
+.hljs-title.class_.inherited__ {
+  color: var(--sh-class);
 }
