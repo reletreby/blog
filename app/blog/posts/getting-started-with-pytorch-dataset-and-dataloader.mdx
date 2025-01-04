@@ -159,9 +159,11 @@ class DataFrameDataset(Dataset):
 
 Creating a custom `Dataset` class involves:
 
-1. An `__init__` function to load your data or point to its location.
-2. A `__len__` function to return the dataset size.
-3. A `__getitem__` function to fetch one row from your dataset.
+1. Inheriting from the `torch.utils.data.Dataset` base class
+2. An `__init__` function to load your data or point to its location
+3. A `__len__` function to return the dataset size
+4. A `__getitem__` function to fetch one row from your dataset
+
 
 The example above accepts a Pandas DataFrame, a list of feature column names, and the label column name. This dataset is fully loaded into memory (unlike FashionMNIST), making it suitable for small-to-medium datasets. For larger datasets, you may need to implement strategies like lazy loading, which is beyond the scope of this post but might be covered in future blogs.
 
