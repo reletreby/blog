@@ -1,6 +1,21 @@
 @import 'tailwindcss';
 @import 'highlight.js/styles/github.css';
 
+/* Override KaTeX font locations */
+.katex {
+  font-family: var(--font-katex-main);
+}
+.katex-math {
+  font-family: var(--font-katex-math);
+}
+.katex-caligraphic {
+  font-family: var(--font-katex-caligraphic);
+}
+
+.katex annotation {
+  display: none;
+}
+
 ::selection {
   background-color: #47a3f3;
   color: #fefefe;

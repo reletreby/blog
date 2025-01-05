@@ -164,7 +164,6 @@ Creating a custom `Dataset` class involves:
 3. A `__len__` function to return the dataset size
 4. A `__getitem__` function to fetch one row from your dataset
 
-
 The example above accepts a Pandas DataFrame, a list of feature column names, and the label column name. This dataset is fully loaded into memory (unlike FashionMNIST), making it suitable for small-to-medium datasets. For larger datasets, you may need to implement strategies like lazy loading, which is beyond the scope of this post but might be covered in future blogs.
 
 ### Example: Creating and Using the Dataset

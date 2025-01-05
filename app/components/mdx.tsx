@@ -10,6 +10,8 @@ import json from 'highlight.js/lib/languages/json';
 import css from 'highlight.js/lib/languages/css';
 import html from 'highlight.js/lib/languages/xml';
 import markdown from 'highlight.js/lib/languages/markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 import React from 'react';
 
 // Register common languages
@@ -154,6 +156,12 @@ export function CustomMDX(props) {
     <MDXRemote
       {...props}
       components={{ ...components, ...(props.components || {}) }}
+      options={{
+        mdxOptions: {
+          remarkPlugins: [remarkMath],
+          rehypePlugins: [rehypeKatex],
+        },
+      }}
     />
   );
 }

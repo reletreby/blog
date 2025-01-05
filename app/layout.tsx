@@ -1,4 +1,5 @@
 import './global.css';
+import 'katex/dist/katex.min.css'; // Add this line
 import type { Metadata } from 'next';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
@@ -8,6 +9,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import Footer from './components/footer';
 import { baseUrl } from './sitemap';
 import GoogleAnalytics from './components/GoogleAnalytics';
+import { katexMain, katexMath } from './fonts';
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
@@ -57,6 +59,8 @@ export default function RootLayout({
         'text-black bg-white dark:text-white dark:bg-black',
         GeistSans.variable,
         GeistMono.variable,
+        katexMain.variable,
+        katexMath.variable,
       )}
     >
       <body className="antialiased max-w-3xl mx-4 mt-8 lg:mx-auto">
