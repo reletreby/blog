@@ -12,6 +12,8 @@ In the [previous blog post](https://www.eletreby.me/blog/getting-started-with-py
 
 Previously, we focused on the **Data** part, discussing the `Dataset` and `DataLoader` classes. With your training and validation datasets prepared and wrapped in `DataLoader` objects, the next step is to build the **Model** class.
 
+If you've worked with other deep learning frameworks before, you'll find PyTorch's approach to model building refreshingly transparent. Rather than configuring models through abstract APIs, PyTorch lets you define neural networks in a way that closely resembles how you'd implement them mathematically, with clear operations and transformations applied to tensors.
+
 This post will guide you through creating a model class in PyTorch, including its essential components, practical implementation, and testing. We will also introduce concepts for future exploration, such as PyTorch's gradient tracking and backpropagation.
 
 ### Key Requirements for a PyTorch Model Class
@@ -19,7 +21,7 @@ This post will guide you through creating a model class in PyTorch, including it
 A custom model class in PyTorch must:
 
 1. **Inherit from `torch.nn.Module`**: This is the base class for all neural network modules in PyTorch.
-2. **Implement an `__init__` method**: This method defines the model’s components, such as layers and activation functions.
+2. **Implement an `__init__` method**: This method defines the model's components, such as layers and activation functions.
 3. **Implement a `forward` method**: This method defines the forward pass, specifying how input data propagates through the model components.
 
 ### Components Available in PyTorch
@@ -46,7 +48,7 @@ Where:
 - $b \in \mathbb{R}^o$: Bias term.
 - $Y \in \mathbb{R}^{k \times o}$: Output matrix.
 
-Here, $k$ is the batch size, $i$ is the input dimension, and $o$ is the output dimension. Note that `Linear` layers do not apply activation functions internally, unlike TensorFlow’s `Dense` layers. You must explicitly add activation functions, such as `ReLU`, after the `Linear` layer if needed.
+Here, $k$ is the batch size, $i$ is the input dimension, and $o$ is the output dimension. Note that `Linear` layers do not apply activation functions internally, unlike TensorFlow's `Dense` layers. You must explicitly add activation functions, such as `ReLU`, after the `Linear` layer if needed.
 
 ### Constructing the Forward Method
 
@@ -187,10 +189,10 @@ This approach helps validate the dimensions and ensures that the data flows corr
 
 ### Testing the Model
 
-To test the model, generate a random tensor with the expected input dimensions and pass it through the model:
+Before deploying your model for training, it's always a good practice to perform a quick test to verify the dimensions flow correctly through your architecture. Let's generate a random tensor with the expected input dimensions and pass it through the model:
 
 ```python
-x_test = torch.rand(1, 28, 28)
+x_test = torch.rand(1, 28, 28)  # One sample with shape matching FashionMNIST
 print(model(x_test))
 ```
 
@@ -201,7 +203,9 @@ tensor([[-0.0179,  0.0328,  0.0971, -0.0456, -0.0692, -0.0543,  0.0189, -0.0254,
          -0.0626,  0.0481]], grad_fn=<AddmmBackward0>)
 ```
 
-This confirms the model produces an output tensor of size 10. The predicted class corresponds to the largest logit value.
+This confirms the model produces an output tensor of size 10 (our number of classes). The values are random at this point since the model weights are initialized randomly. During training, these values will be optimized so that the largest logit value corresponds to the correct class prediction.
+
+This testing step may seem trivial for a simple model, but it becomes crucial when dealing with complex architectures where tensor shape mismatches can be hard to debug later in the training process.
 
 ### Understanding `grad_fn`
 
@@ -209,13 +213,18 @@ The `grad_fn=<AddmmBackward0>` in the output indicates PyTorch has created a com
 
 ### Conclusion
 
-In this post, we covered the essential components of a PyTorch model class, how to define its structure, and how to implement and test the forward pass. Key takeaways include:
+In this post, we covered the essential components of a PyTorch model class, how to define its structure, and how to implement and test the forward pass. 
 
-- PyTorch simplifies model implementation by handling gradient computations.
-- The `forward` method defines the computational graph, specifying how data flows through the model.
-- Testing ensures the model operates as expected and produces the desired output dimensions.
+One thing I particularly appreciate about PyTorch's approach is how it balances simplicity and flexibility. The basic model structure is straightforward, but there's virtually no limit to the complex architectures you can build by extending these concepts. Whether you're implementing a standard neural network like we did here or designing something cutting-edge, the same principles apply.
 
-In the upcoming post, we will explore PyTorch's gradient tracking and computational graphs in greater detail, including implementing backpropagation for a `Linear` layer from scratch.
+Key takeaways include:
+
+- PyTorch simplifies model implementation by handling gradient computations automatically
+- The `forward` method defines the computational graph, specifying how data flows through the model
+- PyTorch's object-oriented design makes it easy to organize, inspect, and debug your models
+- Testing ensures the model operates as expected and produces the desired output dimensions
+
+In the upcoming post, we will explore PyTorch's gradient tracking and computational graphs in greater detail, including implementing backpropagation for a `Linear` layer from scratch. This will give you a deeper understanding of what's happening "under the hood" during model training.
 
 ## References
 
