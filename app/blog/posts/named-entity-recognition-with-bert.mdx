@@ -1,0 +1,564 @@
+---
+title: 'Building a Named Entity Recognition System with BERT'
+publishedAt: '2025-03-05'
+summary: 'A hands-on guide to implementing a Named Entity Recognition system using BERT and the Hugging Face Transformers library. This tutorial walks through dataset preparation, token-label alignment, model training, and evaluation metrics for NER tasks.'
+---
+
+Named Entity Recognition (NER) is a fundamental task in natural language processing that involves identifying and classifying named entities in text into predefined categories such as persons, organizations, locations, and more. In this post, we'll implement a state-of-the-art NER system using BERT and the Hugging Face Transformers library.
+
+# The CoNLL-2003 Dataset
+
+We'll be using the CoNLL-2003 dataset, a widely used benchmark for NER tasks. This dataset contains English news articles with manually annotated linguistic information, including Named Entity Recognition (NER) tags.
+
+## NER Tags in CoNLL-2003
+
+The dataset uses the BIO (Beginning, Inside, Outside) tagging scheme for four entity types:
+
+<Table
+  data={{
+    headers: ['Tag', 'Entity Type', 'Description'],
+    rows: [
+      ['PER', 'Person', 'Names of people'],
+      ['ORG', 'Organization', 'Companies, agencies, institutions'],
+      ['LOC', 'Location', 'Cities, countries, geographic locations'],
+      ['MISC', 'Miscellaneous', 'Other entities (nationalities, events, etc.)'],
+    ],
+  }}
+/>
+
+Each token is labeled with one of the following tags:
+
+- `B-XXX`: Beginning of entity type XXX
+- `I-XXX`: Inside an entity of type XXX
+- `O`: Outside any named entity
+
+For example, in the phrase "Barack Obama was born in Hawaii":
+
+- "Barack" is labeled as `B-PER` (beginning of person)
+- "Obama" is labeled as `I-PER` (inside of person)
+- "was", "born", "in" are labeled as `O` (outside)
+- "Hawaii" is labeled as `B-LOC` (beginning of location)
+
+# Setting Up the Environment
+
+Let's start by installing the required packages:
+
+```python
+!pip install transformers torch datasets tqdm numpy seqeval
+```
+
+And importing the necessary libraries:
+
+```python
+import torch
+from torch.utils.data import DataLoader
+from transformers import (
+    BertTokenizerFast,
+    BertForTokenClassification,
+    AdamW,
+    get_linear_schedule_with_warmup,
+)
+from datasets import load_dataset
+from seqeval.metrics import classification_report
+import numpy as np
+from tqdm import tqdm
+```
+
+Now, let's set up our configuration parameters:
+
+```python
+# Configuration
+MAX_LEN = 128
+BATCH_SIZE = 16
+EPOCHS = 3
+LEARNING_RATE = 3e-5
+MODEL_NAME = "bert-base-cased"
+DATASET_NAME = "conll2003"
+```
+
+# Loading and Preprocessing the Dataset
+
+## Loading the Dataset
+
+We'll use the Hugging Face `datasets` library to load the CoNLL-2003 dataset:
+
+```python
+# Load dataset
+conll_data = load_dataset(DATASET_NAME, trust_remote_code=True)
+
+# Get the label list
+label_list = conll_data["train"].features["ner_tags"].feature.names
+
+# Load tokenizer
+tokenizer = BertTokenizerFast.from_pretrained(MODEL_NAME)
+```
+
+## Understanding BERT Tokenization for NER
+
+A key challenge in using BERT for NER is that BERT uses WordPiece tokenization, which may split a single word into multiple subword tokens. However, in NER, we typically have a single label per word. This creates a misalignment between tokenization and labeling.
+
+For example, the word "transformers" might be tokenized as ["transform", "##ers"], but we only have one NER label for the entire word.
+
+### WordPiece Tokenization
+
+WordPiece is a subword tokenization algorithm that allows the model to handle unseen or rare words by breaking them down into known subword units. This approach:
+
+- Maintains a reasonably sized vocabulary (30K tokens for BERT)
+- Eliminates the "unknown token" problem by decomposing rare words
+- Captures meaningful word parts (prefixes, suffixes, roots)
+
+When a word is split into multiple tokens, BERT marks continuation tokens with the prefix `##`. For example, "architecture" might become ["architect", "##ure"].
+
+### Token-Label Alignment Strategy
+
+To address the token-label misalignment, we'll use the standard approach:
+
+1. Assign the original word's label to the **first subword token**
+2. Mark all subsequent subword tokens with a special label (usually `-100`) to ignore them during loss computation
+
+This works because:
+
+- The first subword often carries the most meaningful part of the word
+- Entity transitions only occur between words, not within them
+- It simplifies the training process
+
+## Implementing the Token-Label Alignment
+
+Let's create a function to tokenize our data and align the labels:
+
+```python
+# Tokenize function
+def tokenize_and_align_labels(examples):
+    tokenized_inputs = tokenizer(
+        examples["tokens"],
+        truncation=True,
+        is_split_into_words=True,
+        padding="max_length",
+        max_length=MAX_LEN,
+    )
+
+    labels = []
+    for i, label in enumerate(examples["ner_tags"]):
+        word_ids = tokenized_inputs.word_ids(batch_index=i)
+        previous_word_idx = None
+        label_ids = []
+        for word_idx in word_ids:
+            # Special tokens have a word id that is None. We set the label to -100
+            # so they are automatically ignored in the loss function.
+            if word_idx is None:
+                label_ids.append(-100)
+            # We set the label for the first token of each word.
+            elif word_idx != previous_word_idx:
+                label_ids.append(label[word_idx])
+            # For the other tokens in a word, we set the label to -100
+            else:
+                label_ids.append(-100)
+            previous_word_idx = word_idx
+
+        labels.append(label_ids)
+
+    tokenized_inputs["labels"] = labels
+    return tokenized_inputs
+```
+
+Note the key components:
+
+- `is_split_into_words=True` tells the tokenizer that our input is already split into words, allowing it to track the mapping between tokens and words
+- `word_ids()` returns the index of the original word for each token
+- We use `-100` as the ignore index for PyTorch's loss functions
+
+Now, let's apply this function to our datasets:
+
+```python
+# Tokenize datasets
+tokenized_train = conll_data["train"].map(tokenize_and_align_labels, batched=True)
+tokenized_validation = conll_data["validation"].map(
+    tokenize_and_align_labels, batched=True
+)
+tokenized_test = conll_data["test"].map(tokenize_and_align_labels, batched=True)
+```
+
+And convert the datasets to PyTorch tensors:
+
+```python
+# Convert to PyTorch tensors
+tokenized_train.set_format(
+    type="torch", columns=["input_ids", "token_type_ids", "attention_mask", "labels"]
+)
+tokenized_validation.set_format(
+    type="torch", columns=["input_ids", "token_type_ids", "attention_mask", "labels"]
+)
+tokenized_test.set_format(
+    type="torch", columns=["input_ids", "token_type_ids", "attention_mask", "labels"]
+)
+```
+
+Finally, create the DataLoaders:
+
+```python
+# Create dataloaders
+train_dataloader = DataLoader(tokenized_train, batch_size=BATCH_SIZE, shuffle=True)
+validation_dataloader = DataLoader(tokenized_validation, batch_size=BATCH_SIZE)
+test_dataloader = DataLoader(tokenized_test, batch_size=BATCH_SIZE)
+```
+
+# Model Architecture: BertForTokenClassification
+
+For NER, we'll use the `BertForTokenClassification` architecture from Hugging Face. This model consists of three main components:
+
+1. **BERT Base Model**: The pretrained encoder that generates contextual token representations
+2. **Dropout Layer**: A regularization mechanism to prevent overfitting
+3. **Classification Head**: A linear layer that maps BERT's hidden states to label predictions
+
+The model processes input through the following steps:
+
+1. Tokenized input enters the BERT encoder
+2. BERT outputs contextualized embeddings (768-dimensional vectors) for each token
+3. Dropout is applied during training
+4. The linear classifier projects from 768 dimensions to our number of labels
+5. The output is a tensor of logits with shape `[batch_size, sequence_length, num_labels]`
+
+Let's initialize our model:
+
+```python
+# Load model
+model = BertForTokenClassification.from_pretrained(
+    MODEL_NAME, num_labels=len(label_list)
+)
+```
+
+We can confirm the architecture by examining the top-level modules:
+
+```python
+# Get the top-level modules
+top_level_modules = list(model.named_children())
+
+# Print each module name and type
+for name, module in top_level_modules:
+    print(f"Module name: {name}")
+    print(f"Module type: {type(module).__name__}")
+    print("-" * 50)
+```
+
+Output:
+
+```
+Module name: bert
+Module type: BertModel
+--------------------------------------------------
+Module name: dropout
+Module type: Dropout
+--------------------------------------------------
+Module name: classifier
+Module type: Linear
+--------------------------------------------------
+```
+
+# Training the Model
+
+## Preparing the Optimizer and Learning Rate Schedule
+
+We'll use the AdamW optimizer with a linear learning rate schedule and warmup:
+
+```python
+# Prepare optimizer and schedule
+optimizer = AdamW(model.parameters(), lr=LEARNING_RATE)
+total_steps = len(train_dataloader) * EPOCHS
+scheduler = get_linear_schedule_with_warmup(
+    optimizer, num_warmup_steps=0, num_training_steps=total_steps
+)
+```
+
+## Moving to GPU (if available)
+
+```python
+# Move model to GPU if available
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model.to(device)
+```
+
+## Training and Evaluation Loop
+
+Now, let's implement the training and evaluation loop:
+
+```python
+# Training loop
+for epoch in range(EPOCHS):
+    # Training
+    model.train()
+    total_train_loss = 0
+
+    for batch in tqdm(train_dataloader, desc=f"Training Epoch {epoch+1}"):
+        input_ids = batch["input_ids"].to(device)
+        attention_mask = batch["attention_mask"].to(device)
+        token_type_ids = batch["token_type_ids"].to(device)
+        labels = batch["labels"].to(device)
+
+        # Forward pass
+        optimizer.zero_grad()
+        outputs = model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            labels=labels,
+        )
+
+        loss = outputs.loss
+        total_train_loss += loss.item()
+
+        # Backward pass
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        optimizer.step()
+        scheduler.step()
+
+    avg_train_loss = total_train_loss / len(train_dataloader)
+    print(f"Average training loss: {avg_train_loss}")
+
+    # Evaluation
+    model.eval()
+    total_eval_loss = 0
+    predictions = []
+    true_labels = []
+
+    for batch in tqdm(validation_dataloader, desc="Evaluating"):
+        with torch.no_grad():
+            input_ids = batch["input_ids"].to(device)
+            attention_mask = batch["attention_mask"].to(device)
+            token_type_ids = batch["token_type_ids"].to(device)
+            labels = batch["labels"].to(device)
+
+            outputs = model(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                token_type_ids=token_type_ids,
+                labels=labels,
+            )
+
+            loss = outputs.loss
+            logits = outputs.logits
+
+            total_eval_loss += loss.item()
+
+            # Move logits and labels to CPU
+            logits = logits.detach().cpu().numpy()
+            label_ids = labels.to("cpu").numpy()
+
+            # Predictions
+            predictions.extend([list(p) for p in np.argmax(logits, axis=2)])
+            true_labels.extend([list(l) for l in label_ids])
+
+    # Remove ignored index (special tokens)
+    true_predictions = [
+        [label_list[p] for (p, l) in zip(prediction, label) if l != -100]
+        for prediction, label in zip(predictions, true_labels)
+    ]
+    true_labels = [
+        [label_list[l] for (p, l) in zip(prediction, label) if l != -100]
+        for prediction, label in zip(predictions, true_labels)
+    ]
+
+    # Print metrics
+    avg_eval_loss = total_eval_loss / len(validation_dataloader)
+    print(f"Validation loss: {avg_eval_loss}")
+
+    report = classification_report(true_labels, true_predictions)
+    print(report)
+```
+
+# Understanding seqeval for NER Evaluation
+
+When evaluating Named Entity Recognition systems, we need specialized metrics that account for the sequential nature of the task. This is where `seqeval` comes in.
+
+## Why Standard Metrics Don't Work for NER
+
+In token classification tasks like NER, we need to evaluate entire entity spans, not just individual tokens. For example, if the model correctly identifies "New" as `B-LOC` but incorrectly labels "York" as `O` instead of `I-LOC`, we should consider the entire entity "New York" as incorrect.
+
+Standard metrics like accuracy don't capture this. They would simply count "New" as correct and "York" as incorrect, missing the entity-level evaluation.
+
+## seqeval: Entity-Level Evaluation
+
+The `seqeval` library provides entity-level evaluation metrics for sequence labeling tasks. It implements:
+
+1. **Entity-level precision**: The percentage of predicted entities that are correct
+2. **Entity-level recall**: The percentage of actual entities that are correctly predicted
+3. **Entity-level F1-score**: The harmonic mean of precision and recall
+
+## The classification_report Function
+
+The `classification_report` function from `seqeval` works similarly to the one in `sklearn.metrics`, but it's designed for sequence labeling:
+
+```python
+from seqeval.metrics import classification_report
+report = classification_report(true_labels, true_predictions)
+```
+
+The function:
+
+1. Takes two lists of lists as input:
+   - `true_labels`: A list where each element is a list of true labels for a sentence
+   - `true_predictions`: A list where each element is a list of predicted labels for a sentence
+2. Identifies complete entity spans based on the BIO tagging scheme
+3. Computes precision, recall, and F1-score for each entity type
+4. Provides micro-average, macro-average, and weighted-average metrics
+
+## Interpreting the Results
+
+Here's a sample output from our model:
+
+```
+              precision    recall  f1-score   support
+
+         LOC       0.97      0.97      0.97      1837
+        MISC       0.89      0.91      0.90       922
+         ORG       0.93      0.93      0.93      1341
+         PER       0.97      0.98      0.97      1836
+
+   micro avg       0.95      0.95      0.95      5936
+   macro avg       0.94      0.95      0.94      5936
+weighted avg       0.95      0.95      0.95      5936
+```
+
+The report shows:
+
+- **Entity-specific metrics**: Performance for each entity type (LOC, MISC, ORG, PER)
+- **Micro-average**: Treats each entity instance equally regardless of type
+- **Macro-average**: Simple average of metrics for each entity type
+- **Weighted-average**: Average of metrics weighted by the number of entities of each type
+
+Note that these metrics are computed at the entity level, not the token level. An entity is counted as correct only if both its boundaries and type are predicted correctly.
+
+# Making Predictions with the Trained Model
+
+Let's create a function to make predictions on new sentences:
+
+```python
+def predict_ner(sentence):
+    model.eval()
+
+    # Tokenize the input sentence
+    # First, split the sentence into words
+    words = sentence.split()
+
+    # Then tokenize with the BERT tokenizer
+    encoded_input = tokenizer(
+        words,
+        is_split_into_words=True,
+        truncation=True,
+        padding="max_length",
+        max_length=MAX_LEN,
+        return_tensors="pt"
+    )
+
+    # Move inputs to the same device as the model
+    input_ids = encoded_input["input_ids"].to(device)
+    attention_mask = encoded_input["attention_mask"].to(device)
+    token_type_ids = encoded_input["token_type_ids"].to(device)
+
+    # Predict
+    with torch.no_grad():
+        outputs = model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids
+        )
+
+    # Get predictions
+    predictions = torch.argmax(outputs.logits, dim=2)
+
+    # Convert predictions to NER tags, considering word pieces
+    word_ids = encoded_input.word_ids(batch_index=0)
+    previous_word_idx = None
+    predicted_labels = []
+
+    for i, word_idx in enumerate(word_ids):
+        # Skip special tokens and duplicated word pieces
+        if word_idx is None:
+            continue
+        if word_idx != previous_word_idx:
+            # Get the predicted label for the first token of the word
+            predicted_labels.append(label_list[predictions[0, i].item()])
+        previous_word_idx = word_idx
+
+    # Pair words with their predicted NER tags
+    result = list(zip(words, predicted_labels))
+
+    return result
+```
+
+Let's test our model on a sample sentence:
+
+```python
+sentence = "Rashad Eletreby met Donald Trump in the White House"
+predictions = predict_ner(sentence)
+
+print("NER Predictions:")
+for word, label in predictions:
+    print(f"{word}: {label}")
+
+# Optional: Format the output to show entities
+print("\nExtracted Entities:")
+current_entity = None
+entity_text = ""
+
+for word, label in predictions:
+    if label.startswith("B-"):
+        # If we were tracking an entity, print it
+        if current_entity:
+            print(f"{current_entity}: {entity_text}")
+        # Start a new entity
+        current_entity = label[2:]  # Remove the B- prefix
+        entity_text = word
+    elif label.startswith("I-") and current_entity == label[2:]:
+        # Continue the current entity
+        entity_text += " " + word
+    elif label == "O":
+        # Outside any entity
+        if current_entity:
+            print(f"{current_entity}: {entity_text}")
+            current_entity = None
+            entity_text = ""
+
+# Print the last entity if there is one
+if current_entity:
+    print(f"{current_entity}: {entity_text}")
+```
+
+Output:
+
+```
+NER Predictions:
+Rashad: B-PER
+Eletreby: I-PER
+met: O
+Donald: B-PER
+Trump: I-PER
+in: O
+the: O
+White: B-LOC
+House: I-LOC
+
+Extracted Entities:
+PER: Rashad Eletreby
+PER: Donald Trump
+LOC: White House
+```
+
+# Conclusion
+
+In this post, we've built a complete Named Entity Recognition system using BERT and the Hugging Face Transformers library. We've covered:
+
+1. Understanding the CoNLL-2003 dataset and the BIO tagging scheme
+2. Addressing the token-label alignment challenge with subword tokenization
+3. Implementing and training a BERT-based NER model
+4. Evaluating the model using entity-level metrics with seqeval
+5. Making predictions on new text and extracting named entities
+
+Named Entity Recognition is a fundamental task in NLP with applications in information extraction, question answering, and more. With the power of BERT and modern deep learning libraries, we can achieve impressive performance on this challenging task.
+
+## References
+
+- [Hugging Face Transformers Documentation](https://huggingface.co/docs/transformers/index)
+- [CoNLL-2003 Dataset](https://www.clips.uantwerpen.be/conll2003/ner/)
+- [seqeval Documentation](https://github.com/chakki-works/seqeval)
+- [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://arxiv.org/abs/1810.04805)
